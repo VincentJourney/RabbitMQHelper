@@ -9,18 +9,24 @@ using RabbitMQHelper.LogExtension;
 using RabbitMQHelper.CoreBusiness;
 using PublicDAL.Dapper;
 using RabbitMQHelper.Model.Entity;
+using System.Threading;
+using Microsoft.Extensions.Logging;
 
 namespace RabbitMQHelper.Middleware
 {
     public class RabbitMqMiddleware
     {
         private readonly RequestDelegate _next;
-        private IExceptionLessLogger _logger { get; }
+        private ILogger _logger { get; }
+        private IExceptionLessLogger _exceptionLess { get; }
 
-        public RabbitMqMiddleware(RequestDelegate next, IExceptionLessLogger exceptionLessLogger)
+        private FaceRecognitionRecordHandle recognitionRecordHandle;
+
+        public RabbitMqMiddleware(RequestDelegate next, ILoggerFactory logger, IExceptionLessLogger exceptionLessLogger)
         {
             _next = next;
-            _logger = exceptionLessLogger;
+            _logger = logger.CreateLogger<RabbitMqMiddleware>();
+            recognitionRecordHandle = new FaceRecognitionRecordHandle(logger);
         }
 
         public async Task Invoke(HttpContext context)
@@ -49,26 +55,50 @@ namespace RabbitMQHelper.Middleware
                     UserName = ConfigurationUtil.ReadSenceMQUserName,
                     Password = ConfigurationUtil.ReadSenceMQPassWord
                 };
-                using (conn = factory.CreateConnection())
-                using (channel = conn.CreateModel())
-                {
-                    string queueName = appKey;
-                    channel.ExchangeDeclare(exchange: exchangeName, type: ExchangeType.Topic, durable: true);
-                    channel.QueueDeclare(queue: queueName, durable: true, exclusive: false, autoDelete: false, arguments: null);
-                    channel.QueueBind(queue: queueName, exchange: exchangeName, routingKey: appKey, arguments: null);
 
-                    var consumer = new EventingBasicConsumer(channel);
-                    consumer.Received += (model, ea) =>
+                //不阻塞主线程
+                ThreadPool.QueueUserWorkItem(o =>
+                {
+                    using (conn = factory.CreateConnection())
+                    using (channel = conn.CreateModel())
                     {
-                        var body = ea.Body;
-                        var message = Encoding.UTF8.GetString(body);
-                        var MId = Guid.NewGuid();
-                        _logger.Info($"【Title : 阅面MQ接收消息】  【Mid : {MId}】  【Body : {message}】");
-                        CRM(message, MId);
-                        channel.BasicAck(ea.DeliveryTag, false);
-                    };
-                    channel.BasicConsume(queueName, false, consumer);
-                }
+                        #region 事件
+                        //string queueName = appKey;
+                        //channel.ExchangeDeclare(exchange: exchangeName, type: ExchangeType.Topic, durable: true);
+                        //channel.QueueDeclare(queue: queueName, durable: true, exclusive: false, autoDelete: false, arguments: null);
+                        //channel.QueueBind(queue: queueName, exchange: exchangeName, routingKey: appKey, arguments: null);
+
+                        //var consumer = new EventingBasicConsumer(channel);
+                        //consumer.Received += (model, ea) =>
+                        //{
+                        //    var body = ea.Body;
+                        //    var message = Encoding.UTF8.GetString(body);
+                        //    var MId = Guid.NewGuid();
+                        //    _logger.Info($"【Title : 阅面MQ接收消息】  【Mid : {MId}】  【Body : {message}】");
+                        //    CRM(message, MId);
+                        //    channel.BasicAck(ea.DeliveryTag, false);
+                        //};
+                        //channel.BasicConsume(queueName, false, consumer);
+                        #endregion
+                        channel.ExchangeDeclare(exchange: exchangeName, type: ExchangeType.Topic, durable: true);
+                        channel.QueueDeclare(queue: QueueName, durable: true, exclusive: false, autoDelete: false, arguments: null);
+                        channel.QueueBind(queue: QueueName, exchange: exchangeName, routingKey: appKey, arguments: null);
+                        var consumer = new QueueingBasicConsumer(channel);
+                        channel.BasicConsume(QueueName, false, consumer);
+                        while (true)
+                        {
+                            var ea = consumer.Queue.Dequeue();
+                            var body = ea.Body;
+                            var message = Encoding.UTF8.GetString(body);
+                            var MId = Guid.NewGuid();
+                            _logger.LogInformation($"【Title : 阅面MQ接收消息】  【Mid : {MId}】  【Body : {message}】");
+
+                            recognitionRecordHandle.Add(message, MId);
+                            channel.BasicAck(ea.DeliveryTag, false);
+                        }
+                    }
+                });
+
             }
             catch (Exception ex)
             {
@@ -76,65 +106,7 @@ namespace RabbitMQHelper.Middleware
             }
         }
 
-        /// <summary>
-        /// 添加到CRM表记录
-        /// </summary>
-        /// <param name="value"></param>
-        /// <param name="MId"></param>
-        private void CRM(string value, Guid MId)
-        {
-            var model = new FaceRecognitionRecord
-            {
-                Id = Guid.NewGuid(),
-                AddedOn = DateTime.Now,
-                CustomerId = Guid.NewGuid(),
-                DeviceName = "",
-                RegionName = "",
-                FaceId = ""
-            };
-            DbContext.Add(model);
-            CRMProductor(value, MId);
-        }
 
-        /// <summary>
-        /// 推送到CRM前端
-        /// </summary>
-        /// <param name="Value"></param>
-        /// <param name="MId"></param>
-        private void CRMProductor(string Value, Guid MId)
-        {
-            var ExchangeName = ConfigurationUtil.CRMMQExchangeName;
-            var QueueName = ConfigurationUtil.CRMMQQueueName;
-            var RoutingKey = ConfigurationUtil.CRMMQRoutingKey;
 
-            var factory = new ConnectionFactory()
-            {
-                HostName = ConfigurationUtil.CRMMQHostName,
-                Port = ConfigurationUtil.CRMMQPort,
-                UserName = ConfigurationUtil.CRMMQUserName,
-                Password = ConfigurationUtil.CRMMQPassWord,
-            };
-            using (var connection = factory.CreateConnection())
-            using (var channel = connection.CreateModel())
-            {
-                channel.ExchangeDeclare(exchange: ExchangeName, type: ExchangeType.Fanout);
-                channel.QueueDeclare(queue: QueueName,
-                                     durable: true,
-                                     exclusive: false,
-                                     autoDelete: false,
-                                     arguments: null);
-                channel.QueueBind(queue: QueueName, exchange: ExchangeName, routingKey: RoutingKey);
-                var properties = channel.CreateBasicProperties();
-                properties.Persistent = true;
-
-                var body = Encoding.UTF8.GetBytes(Value);
-                channel.BasicPublish(exchange: ExchangeName,
-                                     routingKey: RoutingKey,
-                                     basicProperties: properties,
-                                     body: body);
-
-                _logger.Info($"【Title : CRM-MQ接收消息 】  【Mid : {MId}】  【Body : {Value}】");
-            }
-        }
     }
 }
