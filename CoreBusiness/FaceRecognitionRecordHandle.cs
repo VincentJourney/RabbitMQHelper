@@ -97,21 +97,20 @@ namespace RabbitMQHelper.CoreBusiness
             using (var channel = connection.CreateModel())
             {
                 channel.ExchangeDeclare(exchange: ExchangeName, type: ExchangeType.Fanout);
-                channel.QueueDeclare(queue: QueueName,
-                                     durable: true,
-                                     exclusive: false,
-                                     autoDelete: false,
-                                     arguments: null);
-                channel.QueueBind(queue: QueueName, exchange: ExchangeName, routingKey: RoutingKey);
+                //绑定队列则队列中的消息无法确认，这里无需创建队列，由交换机分配
+                //channel.QueueDeclare(queue: QueueName,
+                //                     durable: true,
+                //                     exclusive: false,
+                //                     autoDelete: true,
+                //                     arguments: null);
+                //channel.QueueBind(queue: QueueName, exchange: ExchangeName, routingKey: RoutingKey);
                 var properties = channel.CreateBasicProperties();
-                properties.Persistent = true;
-
+                //properties.Persistent = true;
                 var body = Encoding.UTF8.GetBytes(Value);
                 channel.BasicPublish(exchange: ExchangeName,
                                      routingKey: RoutingKey,
                                      basicProperties: properties,
                                      body: body);
-
                 _logger.LogInformation($"【Title : CRM-MQ发送消息 】  【Mid : {MId}】  【Body : {Value}】");
             }
         }

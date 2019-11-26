@@ -98,7 +98,6 @@ namespace RabbitMQHelper.Middleware
                         }
                     }
                 });
-
             }
             catch (Exception ex)
             {
