@@ -77,59 +77,6 @@ namespace RabbitMQHelper.Middleware
         }
 
         /// <summary>
-        /// 接收阅面推送
-        /// </summary>
-        private void ReadSenseTopicConsumer2()
-        {
-            try
-            {
-                var appKey = ConfigurationUtil.ReadSenceAppKey;  //猎户账号的AppKey
-                var QueueName = ConfigurationUtil.ReadSenceMQQueueName;
-                var ExchangeName = ConfigurationUtil.ReadSenceMQExchangeName;
-
-                var factory = new ConnectionFactory()
-                {
-                    HostName = ConfigurationUtil.ReadSenceMQHostName,
-                    Port = ConfigurationUtil.ReadSenceMQPort,
-                    UserName = ConfigurationUtil.ReadSenceMQUserName,
-                    Password = ConfigurationUtil.ReadSenceMQPassWord
-                };
-                using (var connection = factory.CreateConnection())
-                using (var channel = connection.CreateModel())
-                {
-                    channel.ExchangeDeclare(exchange: ExchangeName, type: "topic", durable: true);
-                    channel.QueueDeclare(queue: QueueName, durable: true, exclusive: false, autoDelete: false, arguments: null);
-                    channel.QueueBind(queue: QueueName, exchange: ExchangeName, routingKey: appKey);
-                    channel.BasicQos(prefetchSize: 0, prefetchCount: 1, global: false);
-                    var consumer = new EventingBasicConsumer(channel);
-                    consumer.Received += (model, ea) =>
-                    {
-                        var body = ea.Body;
-                        var message = Encoding.UTF8.GetString(body);
-                        try
-                        {
-                            var MId = Guid.NewGuid();
-                            _logger.Info($"【Title : 阅面MQ接收消息】  【Mid : {MId}】  【Body : {message}】");
-                            CRM(message, MId);
-
-                            channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
-                        }
-                        catch (Exception ex)
-                        {
-                            throw new Exception($" 阅面MQ接收消息 异常 ===》{ex.Message} ");
-                        }
-                    };
-                    channel.BasicConsume(queue: QueueName, autoAck: true, consumer: consumer);
-                    //channel.BasicConsume(queue: QueueName, true, consumer: consumer);
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($" ReadSenseConsumer 异常 ===》{ex.Message}");
-            }
-        }
-
-        /// <summary>
         /// 添加到CRM表记录
         /// </summary>
         /// <param name="value"></param>
