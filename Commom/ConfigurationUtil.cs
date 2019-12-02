@@ -37,6 +37,7 @@ namespace RabbitMQHelper.Commom
         public static string ReadSenceMQExchangeName => GetConfig<string>("RabbitMq:ReadSence:ExchangeName");
         public static string ReadSenceAppKey => GetConfig<string>("ReadSenceAppKey");
         public static string ReadSenceMQQueueName => GetConfig<string>("RabbitMq:ReadSence:QueueName");
+        public static bool ReadSenceMQEnabled => GetConfig<bool>("RabbitMq:ReadSence:Enabled");
         #endregion
 
         #region CRM

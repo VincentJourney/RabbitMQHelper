@@ -40,6 +40,9 @@ namespace RabbitMQHelper.Middleware
         /// </summary>
         private void ReadSenseTopicConsumer()
         {
+            //阅面MQ 服务是否开启 
+            if (!ConfigurationUtil.ReadSenceMQEnabled) return;
+
             IConnection conn = null;
             IModel channel = null;
             try

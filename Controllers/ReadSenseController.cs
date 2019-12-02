@@ -33,14 +33,7 @@ namespace RabbitMQHelper.Controllers
                 || req.Info == null || string.IsNullOrWhiteSpace(req.Info.person_id))
                 throw new Exception("阅面消息推送：参数异常");
 
-            ResponseModel<SendMessageResponse> res = new ResponseModel<SendMessageResponse>
-            {
-                Result = new Result
-                {
-                    HasError = true,
-                    Message = ""
-                }
-            };
+
 
             var customer = CustomerHandle.GetCustomerInfo(req.Info.person_id); //获取会员信息
             if (customer == null) throw new Exception("找不到会员");
@@ -75,8 +68,15 @@ namespace RabbitMQHelper.Controllers
 
             var result = EnterpriseWeChatUtil.Send(sendReq);
 
-            res.Result.HasError = false;
-            res.Data = result;
+            var res = new ResponseModel<SendMessageResponse>
+            {
+                Result = new Result
+                {
+                    HasError = false,
+                    Message = ""
+                },
+                Data = result
+            };
 
             return Ok(res);
         }
