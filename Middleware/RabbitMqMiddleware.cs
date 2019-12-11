@@ -107,8 +107,5 @@ namespace RabbitMQHelper.Middleware
                 throw new Exception($" ReadSenseConsumer 异常 ===》{ex.Message}");
             }
         }
-
-
-
     }
 }

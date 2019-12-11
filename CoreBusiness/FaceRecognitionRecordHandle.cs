@@ -41,7 +41,8 @@ namespace RabbitMQHelper.CoreBusiness
                         if (!string.IsNullOrWhiteSpace(mesInfo.data.person_uuid))
                         {
                             var customer = CustomerHandle.GetCustomerInfo(mesInfo.data.person_uuid);
-
+                            if (customer == null)
+                                throw new Exception("找不到会员");
                             var model = new FaceRecognitionRecord
                             {
                                 Id = Guid.NewGuid(),
