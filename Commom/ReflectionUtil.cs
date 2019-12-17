@@ -10,7 +10,7 @@ namespace RabbitMQHelper.Commom
             PropertyInfo[] properties = Model.GetType().GetProperties();
             foreach (var item in properties)
             {
-                if (string.IsNullOrWhiteSpace(item.GetValue(Model).ToString()))
+                if (string.IsNullOrWhiteSpace(item?.GetValue(Model)?.ToString()))
                     return false;
             }
             return true;
