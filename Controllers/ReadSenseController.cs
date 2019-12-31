@@ -33,6 +33,8 @@ namespace RabbitMQHelper.Controllers
                 || req.Info == null || string.IsNullOrWhiteSpace(req.Info.person_id))
                 throw new Exception("阅面消息推送：参数异常");
 
+
+
             var customer = CustomerHandle.GetCustomerInfo(req.Info.person_id); //获取会员信息
             if (customer == null) throw new Exception("找不到会员");
 
