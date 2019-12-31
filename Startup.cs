@@ -51,7 +51,12 @@ namespace RabbitMQHelper
             app.UseMiddleware<CustomExceptionHandlerMiddleware>();//全局异常
             app.UseMiddleware<DBMiddleware>();//数据库
             app.UseMiddleware<RabbitMqMiddleware>();//MQ
-            app.UseMvc();
+
+            app.UseMvc(r => r.MapRoute(
+                    name: "default",
+                    template: "{controller}/{action}/{id?}",
+                    defaults: new { controller = "Values", action = "Get" }
+                    ));
         }
     }
 }
