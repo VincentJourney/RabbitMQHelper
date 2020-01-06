@@ -44,6 +44,13 @@ namespace RabbitMQHelper
             {
                 app.UseDeveloperExceptionPage();
             }
+            //DefaultFilesOptions defaultFilesOptions = new DefaultFilesOptions();
+            //defaultFilesOptions.DefaultFileNames.Clear();
+            //defaultFilesOptions.DefaultFileNames.Add("x.html");
+            //app.UseDefaultFiles(defaultFilesOptions);
+            //app.UseStaticFiles();
+
+
             ExceptionlessClient.Default.Configuration.ApiKey = ConfigurationUtil.ExceptionlessApiKey;
             ExceptionlessClient.Default.Configuration.ServerUrl = ConfigurationUtil.ExceptionlessServerUrl;
             //ExceptionlessClient.Default.SubmittingEvent += OnSubmittingEvent;
@@ -52,11 +59,12 @@ namespace RabbitMQHelper
             app.UseMiddleware<DBMiddleware>();//数据库
             app.UseMiddleware<RabbitMqMiddleware>();//MQ
 
-            app.UseMvc(r => r.MapRoute(
-                    name: "default",
-                    template: "{controller}/{action}/{id?}",
-                    defaults: new { controller = "Values", action = "Get" }
-                    ));
+            //app.UseMvc(r => r.MapRoute(
+            //        name: "default",
+            //        template: "{controller}/{action}/{id?}",
+            //        defaults: new { controller = "Values", action = "Get" }
+            //        ));
+            app.UseMvc();
         }
     }
 }

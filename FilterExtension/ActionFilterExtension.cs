@@ -25,8 +25,9 @@ namespace RabbitMQHelper.FilterExtension
         {
             base.OnActionExecuting(filterContext);
             var info = filterContext.HttpContext.GetRequestInfo(ExceptionlessClient.Default.Configuration);
-
-            //var mes = $@"Host:{info.Host} | ApiUrl:{info.HttpMethod} | ClientIpAddress:{info.ClientIpAddress} | PostData:{info.PostData}";
+            var postData = info?.PostData?.ToString();
+            var data = postData.Replace("\n", "").Replace(" ", "");
+            //var mes = $@"【本机IP : {info?.Host} 】| 【接口路由 : {info?.Path}】 | 【客户端IP地址 : {info?.ClientIpAddress}】 | 【入参 : {data}】 | 【出参 : {Result}】";
             //_logger.Info(JsonConvert.SerializeObject(info));
         }
 
@@ -42,13 +43,7 @@ namespace RabbitMQHelper.FilterExtension
             if (filterContext.Exception == null)
             {
                 if (ConfigurationUtil.ExceptionlessIsEnabled)
-                {
-                    //{
-                    //    if (filterContext.Exception != null)
-                    //        filterContext.Exception.ToExceptionless().AddObject(mes, "HttpContextInfo").Submit();
-                    //    else
                     _logger.Info(JsonConvert.SerializeObject(mes));
-                }
                 else
                     _Mlogger.LogInformation(mes);
 

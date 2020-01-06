@@ -58,7 +58,7 @@ namespace RabbitMQHelper.Middleware
                     UserName = ConfigurationUtil.ReadSenceMQUserName,
                     Password = ConfigurationUtil.ReadSenceMQPassWord
                 };
-
+                _logger.LogInformation($"【阅面MQ  开始监听】");
                 //不阻塞主线程
                 ThreadPool.QueueUserWorkItem(o =>
                 {
